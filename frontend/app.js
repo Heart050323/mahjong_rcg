@@ -9,6 +9,10 @@ const form = document.getElementById('mahjongForm');
 const calculateBtn = document.getElementById('calculateBtn');
 const loading = document.getElementById('loading');
 const resultSection = document.getElementById('resultSection');
+const imageModal = document.getElementById('imageModal');
+const imageModalImage = document.getElementById('imageModalImage');
+const imageModalHeader = document.getElementById('imageModalHeader');
+const imageModalClose = document.getElementById('imageModalClose');
 
 // イベントリスナーの設定
 document.addEventListener('DOMContentLoaded', function() {
@@ -22,6 +26,9 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('unifiedPhotoFile').addEventListener('change', function(e) {
         handleUnifiedFileSelect(e);
     });
+    
+    // モーダル関連のイベントリスナー
+    setupImageModal();
 });
 
 // 統合カメラを開く
@@ -213,6 +220,9 @@ function showUnifiedCameraModal() {
 
 // 統合写真を撮影
 function captureUnifiedPhoto(video, modal) {
+    // 既存の画像をクリア
+    clearExistingImages();
+    
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
     
@@ -248,6 +258,9 @@ function selectUnifiedFile() {
 function handleUnifiedFileSelect(event) {
     const file = event.target.files[0];
     if (file && file.type.startsWith('image/')) {
+        // 既存の画像をクリア
+        clearExistingImages();
+        
         const reader = new FileReader();
         reader.onload = function(e) {
             const imageData = e.target.result;
@@ -256,6 +269,9 @@ function handleUnifiedFileSelect(event) {
         };
         reader.readAsDataURL(file);
     }
+    
+    // ファイル入力をリセットして同じファイルも選択できるようにする
+    event.target.value = '';
 }
 
 // ドラッグ&ドロップの設定
@@ -278,6 +294,9 @@ function setupDragAndDrop(areaId, type) {
         
         const file = e.dataTransfer.files[0];
         if (file && file.type.startsWith('image/')) {
+            // 既存の画像をクリア
+            clearExistingImages();
+            
             const reader = new FileReader();
             reader.onload = function(e) {
                 const imageData = e.target.result;
@@ -329,7 +348,7 @@ function initializeCropBoxes() {
 function setupCropBoxInteraction(cropBox) {
     let isDragging = false;
     let isResizing = false;
-    let startX, startY, startWidth, startHeight, startLeft, startTop;
+    let startMouseX, startMouseY, startWidth, startHeight, startLeft, startTop;
     let currentHandle = null;
     
     // ドラッグ開始
@@ -340,8 +359,8 @@ function setupCropBoxInteraction(cropBox) {
             const rect = cropBox.getBoundingClientRect();
             const parentRect = cropBox.parentElement.getBoundingClientRect();
             
-            startX = e.clientX;
-            startY = e.clientY;
+            startMouseX = e.clientX;
+            startMouseY = e.clientY;
             startWidth = rect.width;
             startHeight = rect.height;
             startLeft = rect.left - parentRect.left;
@@ -354,8 +373,11 @@ function setupCropBoxInteraction(cropBox) {
             const rect = cropBox.getBoundingClientRect();
             const parentRect = cropBox.parentElement.getBoundingClientRect();
             
-            startX = e.clientX - (rect.left - parentRect.left);
-            startY = e.clientY - (rect.top - parentRect.top);
+            // マウスの相対位置を記録（ボックス内での位置）
+            startMouseX = e.clientX;
+            startMouseY = e.clientY;
+            startLeft = rect.left - parentRect.left;
+            startTop = rect.top - parentRect.top;
             
             document.addEventListener('mousemove', drag);
             document.addEventListener('mouseup', stopDrag);
@@ -367,10 +389,16 @@ function setupCropBoxInteraction(cropBox) {
         if (!isDragging) return;
         
         const parentRect = cropBox.parentElement.getBoundingClientRect();
-        const newLeft = e.clientX - startX - parentRect.left;
-        const newTop = e.clientY - startY - parentRect.top;
         
-        // 境界チェックを改善
+        // マウスの移動量を計算
+        const deltaX = e.clientX - startMouseX;
+        const deltaY = e.clientY - startMouseY;
+        
+        // 新しい位置を計算
+        const newLeft = startLeft + deltaX;
+        const newTop = startTop + deltaY;
+        
+        // 境界チェック
         const maxLeft = parentRect.width - cropBox.offsetWidth;
         const maxTop = parentRect.height - cropBox.offsetHeight;
         
@@ -385,33 +413,75 @@ function setupCropBoxInteraction(cropBox) {
         if (!isResizing || !currentHandle) return;
         
         const parentRect = cropBox.parentElement.getBoundingClientRect();
-        const deltaX = e.clientX - startX;
-        const deltaY = e.clientY - startY;
+        const deltaX = e.clientX - startMouseX;
+        const deltaY = e.clientY - startMouseY;
         
+        // 角のハンドル
         const isNW = currentHandle.classList.contains('nw');
         const isNE = currentHandle.classList.contains('ne');
         const isSW = currentHandle.classList.contains('sw');
         const isSE = currentHandle.classList.contains('se');
+        
+        // 辺のハンドル
+        const isN = currentHandle.classList.contains('n');
+        const isS = currentHandle.classList.contains('s');
+        const isW = currentHandle.classList.contains('w');
+        const isE = currentHandle.classList.contains('e');
         
         let newWidth = startWidth;
         let newHeight = startHeight;
         let newLeft = startLeft;
         let newTop = startTop;
         
-        // より柔軟なリサイズ計算
-        if (isNW || isNE) {
+        // 各ハンドルに応じた正しいリサイズ計算
+        if (isNW) {
+            // 左上: 左と上の境界を移動、右下は固定
             newWidth = Math.max(50, startWidth - deltaX);
+            newHeight = Math.max(40, startHeight - deltaY);
             newLeft = startLeft + (startWidth - newWidth);
-        }
-        if (isSW || isSE) {
+            newTop = startTop + (startHeight - newHeight);
+        } else if (isNE) {
+            // 右上: 右と上の境界を移動、左下は固定
             newWidth = Math.max(50, startWidth + deltaX);
-        }
-        if (isNW || isSW) {
+            newHeight = Math.max(40, startHeight - deltaY);
+            newLeft = startLeft; // 左側は固定
+            newTop = startTop + (startHeight - newHeight);
+        } else if (isSW) {
+            // 左下: 左と下の境界を移動、右上は固定
+            newWidth = Math.max(50, startWidth - deltaX);
+            newHeight = Math.max(40, startHeight + deltaY);
+            newLeft = startLeft + (startWidth - newWidth);
+            newTop = startTop; // 上側は固定
+        } else if (isSE) {
+            // 右下: 右と下の境界を移動、左上は固定
+            newWidth = Math.max(50, startWidth + deltaX);
+            newHeight = Math.max(40, startHeight + deltaY);
+            newLeft = startLeft; // 左側は固定
+            newTop = startTop; // 上側は固定
+        } else if (isN) {
+            // 上辺: 上の境界のみ移動、左右下は固定
             newHeight = Math.max(40, startHeight - deltaY);
             newTop = startTop + (startHeight - newHeight);
-        }
-        if (isNE || isSE) {
+            newWidth = startWidth; // 幅は固定
+            newLeft = startLeft; // 左側は固定
+        } else if (isS) {
+            // 下辺: 下の境界のみ移動、左右上は固定
             newHeight = Math.max(40, startHeight + deltaY);
+            newTop = startTop; // 上側は固定
+            newWidth = startWidth; // 幅は固定
+            newLeft = startLeft; // 左側は固定
+        } else if (isW) {
+            // 左辺: 左の境界のみ移動、上下右は固定
+            newWidth = Math.max(50, startWidth - deltaX);
+            newLeft = startLeft + (startWidth - newWidth);
+            newHeight = startHeight; // 高さは固定
+            newTop = startTop; // 上側は固定
+        } else if (isE) {
+            // 右辺: 右の境界のみ移動、上下左は固定
+            newWidth = Math.max(50, startWidth + deltaX);
+            newLeft = startLeft; // 左側は固定
+            newHeight = startHeight; // 高さは固定
+            newTop = startTop; // 上側は固定
         }
         
         // 境界チェック
@@ -570,15 +640,57 @@ function updatePreview(containerId, images) {
         img.src = imageData;
         img.alt = `Preview ${index + 1}`;
         
+        // 画像クリックでモーダル表示
+        img.onclick = () => showImageModal(imageData, containerId, index);
+        
         const removeBtn = document.createElement('button');
         removeBtn.className = 'remove-btn';
         removeBtn.textContent = '×';
-        removeBtn.onclick = () => removeImage(containerId, index);
+        removeBtn.onclick = (e) => {
+            e.stopPropagation(); // 画像クリックイベントを防ぐ
+            removeImage(containerId, index);
+        };
         
         previewItem.appendChild(img);
         previewItem.appendChild(removeBtn);
         container.appendChild(previewItem);
     });
+    
+    // 上書き通知の表示/非表示を制御
+    updateOverwriteNotice();
+}
+
+// 上書き通知の表示/非表示を制御
+function updateOverwriteNotice() {
+    const overwriteNotice = document.getElementById('overwriteNotice');
+    const hasImages = handTilesImages.length > 0 || doraTilesImages.length > 0;
+    
+    if (hasImages) {
+        overwriteNotice.style.display = 'block';
+    } else {
+        overwriteNotice.style.display = 'none';
+    }
+}
+
+// 既存の画像をクリア
+function clearExistingImages() {
+    // 画像配列をクリア
+    handTilesImages = [];
+    doraTilesImages = [];
+    unifiedImage = null;
+    
+    // プレビューをクリア
+    updatePreview('handTilesPreview', handTilesImages);
+    updatePreview('doraTilesPreview', doraTilesImages);
+    
+    // 画像エディターを非表示
+    const editor = document.getElementById('imageEditor');
+    if (editor) {
+        editor.style.display = 'none';
+    }
+    
+    // 結果セクションを非表示
+    resultSection.classList.remove('show');
 }
 
 // 画像を削除
@@ -784,6 +896,50 @@ async function testSingleTileRecognition(imageData) {
         console.error('Recognition error:', error);
         return null;
     }
+}
+
+// 画像モーダルの設定
+function setupImageModal() {
+    // モーダルを閉じるイベント
+    imageModalClose.onclick = hideImageModal;
+    
+    // モーダル背景をクリックしたら閉じる
+    imageModal.onclick = function(e) {
+        if (e.target === imageModal) {
+            hideImageModal();
+        }
+    };
+    
+    // ESCキーでモーダルを閉じる
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && imageModal.classList.contains('show')) {
+            hideImageModal();
+        }
+    });
+}
+
+// 画像モーダルを表示
+function showImageModal(imageData, containerId, index) {
+    imageModalImage.src = imageData;
+    
+    // ヘッダーのテキストを設定
+    if (containerId === 'handTilesPreview') {
+        imageModalHeader.textContent = `手牌`;
+    } else if (containerId === 'doraTilesPreview') {
+        imageModalHeader.textContent = `ドラ表示牌`;
+    } else {
+        imageModalHeader.textContent = '画像プレビュー';
+    }
+    
+    imageModal.classList.add('show');
+    document.body.style.overflow = 'hidden'; // スクロールを無効化
+}
+
+// 画像モーダルを非表示
+function hideImageModal() {
+    imageModal.classList.remove('show');
+    document.body.style.overflow = ''; // スクロールを有効化
+    imageModalImage.src = '';
 }
 
 // デバッグ用の関数
