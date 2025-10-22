@@ -530,59 +530,133 @@
 
         .result-section {
             margin-top: 40px;
-            padding: 30px;
+            padding: 20px;
             background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-            border-radius: 15px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             display: none;
+            transition: all 0.3s ease;
         }
 
         .result-section.show {
             display: block;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .result-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
 
         .result-card {
             background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255, 107, 107, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .result-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+
+        .result-card:hover::before {
+            transform: scaleX(1);
         }
 
         .result-card h3 {
             color: #ff6b6b;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .result-card .value {
-            font-size: 2em;
+            font-size: clamp(1.8em, 4vw, 2.5em);
             font-weight: bold;
             color: #333;
+            line-height: 1.2;
+            word-break: break-all;
         }
 
         .yaku-list {
             background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255, 107, 107, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .yaku-list:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
         }
 
         .yaku-list h3 {
             color: #ff6b6b;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            font-weight: 600;
+            text-align: center;
+            border-bottom: 2px solid rgba(255, 107, 107, 0.2);
+            padding-bottom: 10px;
         }
 
         .yaku-item {
-            background: #f8f9fa;
-            padding: 10px 15px;
-            margin: 5px 0;
-            border-radius: 5px;
+            background: linear-gradient(135deg, #f8f9fa, #ffffff);
+            padding: 15px 20px;
+            margin: 10px 0;
+            border-radius: 10px;
             border-left: 4px solid #ff6b6b;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .yaku-item:hover {
+            transform: translateX(5px);
+            background: linear-gradient(135deg, #fff5f5, #ffffff);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.15);
+        }
+
+        .yaku-item:first-child {
+            margin-top: 0;
+        }
+
+        .yaku-item:last-child {
+            margin-bottom: 0;
         }
 
         .loading {
@@ -629,6 +703,83 @@
             
             .header h1 {
                 font-size: 2em;
+            }
+            
+            .result-section {
+                padding: 15px;
+                margin-top: 30px;
+            }
+            
+            .result-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                margin-bottom: 20px;
+            }
+            
+            .result-card {
+                padding: 20px;
+                text-align: center;
+            }
+            
+            .result-card h3 {
+                font-size: 1.1em;
+                margin-bottom: 12px;
+            }
+            
+            .result-card .value {
+                font-size: clamp(1.5em, 6vw, 2em);
+            }
+            
+            .yaku-list {
+                padding: 20px;
+            }
+            
+            .yaku-list h3 {
+                font-size: 1.2em;
+                margin-bottom: 15px;
+            }
+            
+            .yaku-item {
+                padding: 12px 15px;
+                margin: 8px 0;
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-content {
+                padding: 20px;
+            }
+            
+            .result-section {
+                padding: 12px;
+                border-radius: 15px;
+            }
+            
+            .result-card {
+                padding: 15px;
+                border-radius: 12px;
+            }
+            
+            .result-card h3 {
+                font-size: 1em;
+                margin-bottom: 10px;
+            }
+            
+            .result-card .value {
+                font-size: clamp(1.3em, 8vw, 1.8em);
+            }
+            
+            .yaku-list {
+                padding: 15px;
+                border-radius: 12px;
+            }
+            
+            .yaku-item {
+                padding: 10px 12px;
+                margin: 6px 0;
+                font-size: 13px;
+                border-radius: 8px;
             }
         }
     </style>
