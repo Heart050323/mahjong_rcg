@@ -72,7 +72,7 @@ function showUnifiedCameraModal() {
         overflow: hidden;
     `;
     
-    // Video + overlay container so controls don't overlap the content
+    // Video + overlay container
     const frame = document.createElement('div');
     frame.style.cssText = `
         position: relative;
@@ -83,6 +83,9 @@ function showUnifiedCameraModal() {
         border-radius: 10px;
         overflow: hidden;
         background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     `;
     
     const video = document.createElement('video');
@@ -96,9 +99,10 @@ function showUnifiedCameraModal() {
         display: block;
         border-radius: 10px;
         background: #000;
+        object-fit: cover;
     `;
     
-    // AR風の枠を追加
+    // AR風の枠を追加 - ビデオが読み込まれた後に位置を調整
     const overlay = document.createElement('div');
     overlay.style.cssText = `
         position: absolute;
@@ -107,16 +111,14 @@ function showUnifiedCameraModal() {
         width: 100%;
         height: 100%;
         pointer-events: none;
+        display: none;
     `;
     
     // ドラ表示牌エリアの枠（上側）
     const doraFrame = document.createElement('div');
+    doraFrame.className = 'dora-frame';
     doraFrame.style.cssText = `
         position: absolute;
-        top: 20%;
-        left: 10%;
-        width: 80%;
-        height: 20%;
         border: 3px solid #4ecdc4;
         border-radius: 10px;
         background: rgba(78, 205, 196, 0.1);
@@ -133,16 +135,15 @@ function showUnifiedCameraModal() {
         background: rgba(0,0,0,0.7);
         padding: 5px 10px;
         border-radius: 5px;
+        font-size: 12px;
+        white-space: nowrap;
     `;
     
     // 手牌エリアの枠（下側）
     const handFrame = document.createElement('div');
+    handFrame.className = 'hand-frame';
     handFrame.style.cssText = `
         position: absolute;
-        top: 50%;
-        left: 10%;
-        width: 80%;
-        height: 30%;
         border: 3px solid #ff6b6b;
         border-radius: 10px;
         background: rgba(255, 107, 107, 0.1);
@@ -159,12 +160,27 @@ function showUnifiedCameraModal() {
         background: rgba(0,0,0,0.7);
         padding: 5px 10px;
         border-radius: 5px;
+        font-size: 12px;
+        white-space: nowrap;
     `;
     
     doraFrame.appendChild(doraLabel);
     handFrame.appendChild(handLabel);
     overlay.appendChild(doraFrame);
     overlay.appendChild(handFrame);
+    
+    // ビデオが読み込まれた後にオーバーレイを調整
+    video.addEventListener('loadedmetadata', function() {
+        adjustOverlayPosition(video, overlay, doraFrame, handFrame);
+        overlay.style.display = 'block';
+    });
+    
+    // 画面回転やリサイズ時にも調整
+    window.addEventListener('resize', function() {
+        setTimeout(() => {
+            adjustOverlayPosition(video, overlay, doraFrame, handFrame);
+        }, 100);
+    });
     
     const controls = document.createElement('div');
     controls.style.cssText = `
@@ -216,6 +232,54 @@ function showUnifiedCameraModal() {
     modal.appendChild(frame);
     modal.appendChild(controls);
     document.body.appendChild(modal);
+}
+
+// オーバーレイの位置を調整する関数
+function adjustOverlayPosition(video, overlay, doraFrame, handFrame) {
+    const videoRect = video.getBoundingClientRect();
+    const overlayRect = overlay.getBoundingClientRect();
+    
+    // ビデオの実際の表示領域を計算
+    const videoAspectRatio = video.videoWidth / video.videoHeight;
+    const containerAspectRatio = videoRect.width / videoRect.height;
+    
+    let actualVideoWidth, actualVideoHeight, offsetX, offsetY;
+    
+    if (videoAspectRatio > containerAspectRatio) {
+        // ビデオが横長の場合（横向きスマホなど）
+        actualVideoWidth = videoRect.width;
+        actualVideoHeight = videoRect.width / videoAspectRatio;
+        offsetX = 0;
+        offsetY = (videoRect.height - actualVideoHeight) / 2;
+    } else {
+        // ビデオが縦長の場合
+        actualVideoWidth = videoRect.height * videoAspectRatio;
+        actualVideoHeight = videoRect.height;
+        offsetX = (videoRect.width - actualVideoWidth) / 2;
+        offsetY = 0;
+    }
+    
+    // ドラ表示牌エリア（上側20%）
+    const doraTop = offsetY + actualVideoHeight * 0.2;
+    const doraLeft = offsetX + actualVideoWidth * 0.1;
+    const doraWidth = actualVideoWidth * 0.8;
+    const doraHeight = actualVideoHeight * 0.2;
+    
+    doraFrame.style.top = doraTop + 'px';
+    doraFrame.style.left = doraLeft + 'px';
+    doraFrame.style.width = doraWidth + 'px';
+    doraFrame.style.height = doraHeight + 'px';
+    
+    // 手牌エリア（中央から下側30%）
+    const handTop = offsetY + actualVideoHeight * 0.5;
+    const handLeft = offsetX + actualVideoWidth * 0.1;
+    const handWidth = actualVideoWidth * 0.8;
+    const handHeight = actualVideoHeight * 0.3;
+    
+    handFrame.style.top = handTop + 'px';
+    handFrame.style.left = handLeft + 'px';
+    handFrame.style.width = handWidth + 'px';
+    handFrame.style.height = handHeight + 'px';
 }
 
 // 統合写真を撮影
@@ -587,58 +651,13 @@ function cropImages() {
     img.src = editorImage.src;
 }
 
-// 自動分離を実行
-function autoSeparateImage() {
-    if (unifiedImage) {
-        separateImage(unifiedImage);
-        // エディターを非表示
-        document.getElementById('imageEditor').style.display = 'none';
-    }
-}
-
 // 切り出しをキャンセル
 function cancelCrop() {
     document.getElementById('imageEditor').style.display = 'none';
     unifiedImage = null;
 }
 
-// 画像を分離する関数（自動分離用）- 現在は使用されていません
-// カメラ撮影時も画像エディターを使用するように変更されました
-function separateImage(imageData) {
-    const img = new Image();
-    img.onload = function() {
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        
-        // より適切な領域分割: 上側25%をドラ、下側40%を手牌
-        const doraCanvas = document.createElement('canvas');
-        const doraContext = doraCanvas.getContext('2d');
-        const doraHeight = Math.floor(img.height * 0.25);
-        doraCanvas.width = img.width;
-        doraCanvas.height = doraHeight;
-        doraContext.drawImage(img, 0, 0, img.width, doraHeight, 0, 0, img.width, doraHeight);
-        const doraImageData = doraCanvas.toDataURL('image/jpeg', 0.8);
-        
-        // 手牌エリアを切り出し（下側40%）
-        const handCanvas = document.createElement('canvas');
-        const handContext = handCanvas.getContext('2d');
-        const handHeight = Math.floor(img.height * 0.4);
-        const handStartY = img.height - handHeight;
-        handCanvas.width = img.width;
-        handCanvas.height = handHeight;
-        handContext.drawImage(img, 0, handStartY, img.width, handHeight, 0, 0, img.width, handHeight);
-        const handImageData = handCanvas.toDataURL('image/jpeg', 0.8);
-        
-        // 配列をクリアして新しい画像を追加
-        handTilesImages = [handImageData];
-        doraTilesImages = [doraImageData];
-        
-        // プレビューを更新
-        updatePreview('handTilesPreview', handTilesImages);
-        updatePreview('doraTilesPreview', doraTilesImages);
-    };
-    img.src = imageData;
-}
+
 
 // プレビューの更新
 function updatePreview(containerId, images) {
