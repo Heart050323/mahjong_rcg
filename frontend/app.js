@@ -182,6 +182,13 @@ function showUnifiedCameraModal() {
         }, 100);
     });
     
+    // 画面回転時の対応を追加
+    window.addEventListener('orientationchange', function() {
+        setTimeout(() => {
+            adjustOverlayPosition(video, overlay, doraFrame, handFrame);
+        }, 300);
+    });
+    
     const controls = document.createElement('div');
     controls.style.cssText = `
         position: fixed;
@@ -259,22 +266,26 @@ function adjustOverlayPosition(video, overlay, doraFrame, handFrame) {
         offsetY = 0;
     }
     
-    // ドラ表示牌エリア（上側20%）
-    const doraTop = offsetY + actualVideoHeight * 0.2;
-    const doraLeft = offsetX + actualVideoWidth * 0.1;
-    const doraWidth = actualVideoWidth * 0.8;
-    const doraHeight = actualVideoHeight * 0.2;
+    // 画面の向きを判定
+    const isLandscape = window.innerWidth > window.innerHeight;
+    const isSmallScreen = window.innerWidth <= 768;
+    
+    // ドラ表示牌エリア（上側）
+    const doraTop = offsetY + actualVideoHeight * (isLandscape && isSmallScreen ? 0.15 : 0.2);
+    const doraLeft = offsetX + actualVideoWidth * (isLandscape && isSmallScreen ? 0.05 : 0.1);
+    const doraWidth = actualVideoWidth * (isLandscape && isSmallScreen ? 0.9 : 0.8);
+    const doraHeight = actualVideoHeight * (isLandscape && isSmallScreen ? 0.25 : 0.2);
     
     doraFrame.style.top = doraTop + 'px';
     doraFrame.style.left = doraLeft + 'px';
     doraFrame.style.width = doraWidth + 'px';
     doraFrame.style.height = doraHeight + 'px';
     
-    // 手牌エリア（中央から下側30%）
-    const handTop = offsetY + actualVideoHeight * 0.5;
-    const handLeft = offsetX + actualVideoWidth * 0.1;
-    const handWidth = actualVideoWidth * 0.8;
-    const handHeight = actualVideoHeight * 0.3;
+    // 手牌エリア（下側、より横長に）
+    const handTop = offsetY + actualVideoHeight * (isLandscape && isSmallScreen ? 0.45 : 0.5);
+    const handLeft = offsetX + actualVideoWidth * (isLandscape && isSmallScreen ? 0.02 : 0.05);
+    const handWidth = actualVideoWidth * (isLandscape && isSmallScreen ? 0.96 : 0.9);
+    const handHeight = actualVideoHeight * (isLandscape && isSmallScreen ? 0.4 : 0.35);
     
     handFrame.style.top = handTop + 'px';
     handFrame.style.left = handLeft + 'px';
@@ -392,39 +403,95 @@ function initializeCropBoxes() {
     const doraBox = document.getElementById('doraCropBox');
     const editorImage = document.getElementById('editorImage');
     
-    // デフォルト位置を設定（上:ドラ表示牌、下:手牌）
-    doraBox.style.top = '20%';
-    doraBox.style.left = '10%';
-    doraBox.style.width = '80%';
-    doraBox.style.height = '20%';
+    // 画面サイズと向きに応じたデフォルト位置を設定
+    setTimeout(() => {
+        adjustCropBoxPositions();
+        
+        // ドラッグ&リサイズ機能を追加
+        setupCropBoxInteraction(handBox);
+        setupCropBoxInteraction(doraBox);
+        
+        // 画面回転・リサイズ対応
+        window.addEventListener('orientationchange', () => {
+            setTimeout(adjustCropBoxPositions, 300);
+        });
+        
+        window.addEventListener('resize', () => {
+            setTimeout(adjustCropBoxPositions, 100);
+        });
+    }, 100);
+}
+
+// クロップボックスの位置を画面サイズと向きに応じて調整
+function adjustCropBoxPositions() {
+    const handBox = document.getElementById('handCropBox');
+    const doraBox = document.getElementById('doraCropBox');
     
-    handBox.style.top = '50%';
-    handBox.style.left = '10%';
-    handBox.style.width = '80%';
-    handBox.style.height = '30%';
+    if (!handBox || !doraBox) return;
     
-    // ドラッグ&リサイズ機能を追加
-    setupCropBoxInteraction(handBox);
-    setupCropBoxInteraction(doraBox);
+    const isLandscape = window.innerWidth > window.innerHeight;
+    const isSmallScreen = window.innerWidth <= 768;
+    
+    if (isSmallScreen && isLandscape) {
+        // スマホ横向き: より横長に配置
+        doraBox.style.top = '10%';
+        doraBox.style.left = '5%';
+        doraBox.style.width = '90%';
+        doraBox.style.height = '25%';
+        
+        handBox.style.top = '40%';
+        handBox.style.left = '2%';
+        handBox.style.width = '96%';
+        handBox.style.height = '45%';
+    } else if (isSmallScreen) {
+        // スマホ縦向き: 広めに配置
+        doraBox.style.top = '15%';
+        doraBox.style.left = '5%';
+        doraBox.style.width = '90%';
+        doraBox.style.height = '25%';
+        
+        handBox.style.top = '45%';
+        handBox.style.left = '2%';
+        handBox.style.width = '96%';
+        handBox.style.height = '40%';
+    } else {
+        // デスクトップ: 標準配置
+        doraBox.style.top = '20%';
+        doraBox.style.left = '10%';  
+        doraBox.style.width = '80%';
+        doraBox.style.height = '20%';
+        
+        handBox.style.top = '50%';
+        handBox.style.left = '5%';
+        handBox.style.width = '90%';
+        handBox.style.height = '35%';
+    }
 }
 
 // クロップボックスの操作機能を設定
 function setupCropBoxInteraction(cropBox) {
     let isDragging = false;
     let isResizing = false;
-    let startMouseX, startMouseY, startWidth, startHeight, startLeft, startTop;
+    let startX, startY, startWidth, startHeight, startLeft, startTop;
     let currentHandle = null;
     
-    // ドラッグ開始
-    cropBox.addEventListener('mousedown', function(e) {
+    // マウスイベント
+    cropBox.addEventListener('mousedown', handleStart);
+    
+    // タッチイベント
+    cropBox.addEventListener('touchstart', handleStart, { passive: false });
+    
+    function handleStart(e) {
+        const event = e.type === 'touchstart' ? e.touches[0] : e;
+        
         if (e.target.classList.contains('handle')) {
             isResizing = true;
             currentHandle = e.target;
             const rect = cropBox.getBoundingClientRect();
             const parentRect = cropBox.parentElement.getBoundingClientRect();
             
-            startMouseX = e.clientX;
-            startMouseY = e.clientY;
+            startX = event.clientX;
+            startY = event.clientY;
             startWidth = rect.width;
             startHeight = rect.height;
             startLeft = rect.left - parentRect.left;
@@ -432,31 +499,35 @@ function setupCropBoxInteraction(cropBox) {
             
             document.addEventListener('mousemove', resize);
             document.addEventListener('mouseup', stopResize);
+            document.addEventListener('touchmove', resize, { passive: false });
+            document.addEventListener('touchend', stopResize);
         } else {
             isDragging = true;
             const rect = cropBox.getBoundingClientRect();
             const parentRect = cropBox.parentElement.getBoundingClientRect();
             
-            // マウスの相対位置を記録（ボックス内での位置）
-            startMouseX = e.clientX;
-            startMouseY = e.clientY;
+            startX = event.clientX;
+            startY = event.clientY;
             startLeft = rect.left - parentRect.left;
             startTop = rect.top - parentRect.top;
             
             document.addEventListener('mousemove', drag);
             document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchmove', drag, { passive: false });
+            document.addEventListener('touchend', stopDrag);
         }
         e.preventDefault();
-    });
+    }
     
     function drag(e) {
         if (!isDragging) return;
         
+        const event = e.type === 'touchmove' ? e.touches[0] : e;
         const parentRect = cropBox.parentElement.getBoundingClientRect();
         
-        // マウスの移動量を計算
-        const deltaX = e.clientX - startMouseX;
-        const deltaY = e.clientY - startMouseY;
+        // マウス/タッチの移動量を計算
+        const deltaX = event.clientX - startX;
+        const deltaY = event.clientY - startY;
         
         // 新しい位置を計算
         const newLeft = startLeft + deltaX;
@@ -471,14 +542,17 @@ function setupCropBoxInteraction(cropBox) {
         
         cropBox.style.left = constrainedLeft + 'px';
         cropBox.style.top = constrainedTop + 'px';
+        
+        e.preventDefault();
     }
     
     function resize(e) {
         if (!isResizing || !currentHandle) return;
         
+        const event = e.type === 'touchmove' ? e.touches[0] : e;
         const parentRect = cropBox.parentElement.getBoundingClientRect();
-        const deltaX = e.clientX - startMouseX;
-        const deltaY = e.clientY - startMouseY;
+        const deltaX = event.clientX - startX;
+        const deltaY = event.clientY - startY;
         
         // 角のハンドル
         const isNW = currentHandle.classList.contains('nw');
@@ -579,12 +653,16 @@ function setupCropBoxInteraction(cropBox) {
         cropBox.style.height = newHeight + 'px';
         cropBox.style.left = newLeft + 'px';
         cropBox.style.top = newTop + 'px';
+        
+        e.preventDefault();
     }
     
     function stopDrag() {
         isDragging = false;
         document.removeEventListener('mousemove', drag);
         document.removeEventListener('mouseup', stopDrag);
+        document.removeEventListener('touchmove', drag);
+        document.removeEventListener('touchend', stopDrag);
     }
     
     function stopResize() {
@@ -592,6 +670,8 @@ function setupCropBoxInteraction(cropBox) {
         currentHandle = null;
         document.removeEventListener('mousemove', resize);
         document.removeEventListener('mouseup', stopResize);
+        document.removeEventListener('touchmove', resize);
+        document.removeEventListener('touchend', stopResize);
     }
 }
 

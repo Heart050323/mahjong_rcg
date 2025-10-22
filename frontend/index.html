@@ -197,9 +197,9 @@
             border-color: #ff6b6b;
             background: rgba(255, 107, 107, 0.1);
             top: 50%;
-            left: 10%;
-            width: 80%;
-            height: 30%;
+            left: 5%;
+            width: 90%;
+            height: 35%;
         }
         
         .dora-crop {
@@ -744,6 +744,37 @@
                 margin: 8px 0;
                 font-size: 14px;
             }
+            
+            /* モバイル向けクロップボックス調整 */
+            .crop-box {
+                touch-action: none;
+            }
+            
+            .handle {
+                width: 20px;
+                height: 20px;
+                border-width: 3px;
+            }
+            
+            .crop-label {
+                font-size: 14px;
+                padding: 8px 12px;
+            }
+            
+            /* モバイル向け手牌エリア調整 */
+            .hand-crop {
+                top: 45%;
+                left: 2%;
+                width: 96%;
+                height: 40%;
+            }
+            
+            .dora-crop {
+                top: 15%;
+                left: 5%;
+                width: 90%;
+                height: 25%;
+            }
         }
 
         @media (max-width: 480px) {
@@ -780,6 +811,50 @@
                 margin: 6px 0;
                 font-size: 13px;
                 border-radius: 8px;
+            }
+        }
+
+        /* スマホ横向き対応 */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .main-content {
+                padding: 15px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+                margin-bottom: 5px;
+            }
+            
+            .header p {
+                font-size: 1em;
+            }
+            
+            .form-section {
+                margin-bottom: 25px;
+            }
+            
+            .form-section h2 {
+                font-size: 1.3em;
+                margin-bottom: 15px;
+            }
+            
+            /* 横画面時の手牌エリアをより横長に */
+            .hand-crop {
+                top: 40%;
+                left: 2%;
+                width: 96%;
+                height: 45%;
+            }
+            
+            .dora-crop {
+                top: 10%;
+                left: 5%;
+                width: 90%;
+                height: 25%;
             }
         }
     </style>
