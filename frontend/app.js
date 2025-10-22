@@ -233,8 +233,8 @@ function captureUnifiedPhoto(video, modal) {
     const imageData = canvas.toDataURL('image/jpeg', 0.8);
     unifiedImage = imageData;
     
-    // 画像を分離してプレビューに表示
-    separateImage(imageData);
+    // カメラ撮影でも画像エディターを表示
+    showImageEditor(imageData);
     
     closeCamera(modal);
 }
@@ -587,33 +587,46 @@ function cropImages() {
     img.src = editorImage.src;
 }
 
+// 自動分離を実行
+function autoSeparateImage() {
+    if (unifiedImage) {
+        separateImage(unifiedImage);
+        // エディターを非表示
+        document.getElementById('imageEditor').style.display = 'none';
+    }
+}
+
 // 切り出しをキャンセル
 function cancelCrop() {
     document.getElementById('imageEditor').style.display = 'none';
     unifiedImage = null;
 }
 
-// 画像を分離する関数（自動分離用）
+// 画像を分離する関数（自動分離用）- 現在は使用されていません
+// カメラ撮影時も画像エディターを使用するように変更されました
 function separateImage(imageData) {
     const img = new Image();
     img.onload = function() {
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         
-        // ドラ表示牌エリアを切り出し（上側20%）
+        // より適切な領域分割: 上側25%をドラ、下側40%を手牌
         const doraCanvas = document.createElement('canvas');
         const doraContext = doraCanvas.getContext('2d');
+        const doraHeight = Math.floor(img.height * 0.25);
         doraCanvas.width = img.width;
-        doraCanvas.height = img.height * 0.2;
-        doraContext.drawImage(img, 0, 0, img.width, img.height * 0.2, 0, 0, img.width, img.height * 0.2);
+        doraCanvas.height = doraHeight;
+        doraContext.drawImage(img, 0, 0, img.width, doraHeight, 0, 0, img.width, doraHeight);
         const doraImageData = doraCanvas.toDataURL('image/jpeg', 0.8);
         
-        // 手牌エリアを切り出し（下側30%）
+        // 手牌エリアを切り出し（下側40%）
         const handCanvas = document.createElement('canvas');
         const handContext = handCanvas.getContext('2d');
+        const handHeight = Math.floor(img.height * 0.4);
+        const handStartY = img.height - handHeight;
         handCanvas.width = img.width;
-        handCanvas.height = img.height * 0.3;
-        handContext.drawImage(img, 0, img.height * 0.7, img.width, img.height * 0.3, 0, 0, img.width, img.height * 0.3);
+        handCanvas.height = handHeight;
+        handContext.drawImage(img, 0, handStartY, img.width, handHeight, 0, 0, img.width, handHeight);
         const handImageData = handCanvas.toDataURL('image/jpeg', 0.8);
         
         // 配列をクリアして新しい画像を追加
