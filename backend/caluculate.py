@@ -141,6 +141,7 @@ def tiles_list_to_string(tiles):
 def safe_string_to_136_array(TilesConverter, tiles_str):
     if not tiles_str:
         return []
+    
     try:
         return TilesConverter.string_to_136_array(tiles=tiles_str)
     except TypeError:
@@ -148,13 +149,21 @@ def safe_string_to_136_array(TilesConverter, tiles_str):
         tmp = ""
         for ch in tiles_str:
             if ch in "mpsz":
-                if ch == "m": man = tmp
-                elif ch == "p": pin = tmp
-                elif ch == "s": sou = tmp
-                elif ch == "z": honors = tmp
-                tmp = ""
+                if ch == "m": 
+                    man += tmp
+                    tmp = ""
+                elif ch == "p": 
+                    pin += tmp
+                    tmp = ""
+                elif ch == "s": 
+                    sou += tmp
+                    tmp = ""
+                elif ch == "z": 
+                    honors += tmp
+                    tmp = ""
             else:
                 tmp += ch
+        
         return TilesConverter.string_to_136_array(man=man, pin=pin, sou=sou, honors=honors)
 
 
@@ -170,6 +179,12 @@ def main():
     ap.add_argument("--dora", type=str, default="")
     args, _ = ap.parse_known_args()
 
+    # 引数の確認
+    print("🔍 ===== 受信引数確認 =====")
+    print(f"  ドラ引数: '{args.dora}' (長さ: {len(args.dora)})")
+    print(f"  リーチ: {args.riichi}, 門前: {args.closed}, ロン: {args.ron}")
+    print(f"  場風: {args.round_wind}, 自風: {args.seat_wind}")
+
     ensure_mahjong()
     HandCalculator, TilesConverter, (EAST, SOUTH, WEST, NORTH), HandConfig, OptionalRules = _import_mahjong()
 
@@ -180,11 +195,7 @@ def main():
     print("🀄 ===== 存在する牌とその枚数 =====")
     print(to_pretty_counts(counts))
     
-    # ドラ表示牌の情報を表示
-    if args.dora:
-        print(f"🀅 ===== ドラ表示牌 =====")
-        print(f"  ドラ表示牌: {args.dora}")
-        print(f"  ドラ枚数: {len(args.dora.replace('m', '').replace('p', '').replace('s', '').replace('z', ''))}枚")
+
 
     if not kept:
         print("❌ 有効な検出がありません。")
@@ -208,7 +219,14 @@ def main():
 
     tiles_136 = safe_string_to_136_array(TilesConverter, tiles_str)
     win_tile_136 = safe_string_to_136_array(TilesConverter, winning_tile)[0]
-    dora_indicators = safe_string_to_136_array(TilesConverter, args.dora) if args.dora else []
+    
+    # ドラインジケーターの変換
+    if args.dora:
+        print(f"🀅 ドラ表示牌設定: {args.dora} ({len(args.dora.replace('m', '').replace('p', '').replace('s', '').replace('z', ''))}枚)")
+        dora_indicators = safe_string_to_136_array(TilesConverter, args.dora)
+    else:
+        print("ℹ️ ドラ表示牌なし")
+        dora_indicators = []
 
     # --- OptionalRules を安全に設定 ---
     options = OptionalRules()  # 引数なしで作成（互換性のため）
@@ -319,9 +337,20 @@ def main():
         "Ippatsu": "一発",
         "Tanyao": "断幺九",
         "Yakuhai": "役牌",
+        "Yakuhai (east)": "役牌（東）",
+        "Yakuhai (south)": "役牌（南）",
+        "Yakuhai (west)": "役牌（西）",
+        "Yakuhai (north)": "役牌（北）",
+        "Yakuhai (haku)": "役牌（白）",
+        "Yakuhai (hatsu)": "役牌（發）",
+        "Yakuhai (chun)": "役牌（中）",
         "Sanshoku Doukou": "三色同刻",
         "Sankantsu": "三槓子",
         "Toitoi": "対々和",
+        "Chiitoitsu": "七対子",
+        "Honrou": "混老頭",
+        "Ryanpeikou": "二盃口",
+        "Chanta": "混全帯幺九",
         "Sanankou": "三暗刻",
         "Shousangen": "小三元",
         "Honitsu": "混一色",
@@ -362,11 +391,22 @@ def main():
             # 辞書形式でない場合は文字列として扱う
             cost_dict = str(result.cost)
     
+    # 役のリストを翻数付きで作成
+    yaku_with_han = []
+    if result.yaku:
+        for y in result.yaku:
+            yaku_name = translate_yaku_name(_yaku_name(y))
+            han_value = _yaku_han(y, is_closed=args.closed)
+            if han_value is not None:
+                yaku_with_han.append(f"{yaku_name} ({han_value}翻)")
+            else:
+                yaku_with_han.append(yaku_name)
+    
     json_result = {
         "han": result.han,
         "fu": result.fu,
         "cost": cost_dict,
-        "yaku": [translate_yaku_name(_yaku_name(y)) for y in result.yaku] if result.yaku else []
+        "yaku": yaku_with_han
     }
     print(f"JSON_RESULT: {json.dumps(json_result, ensure_ascii=False)}")
 

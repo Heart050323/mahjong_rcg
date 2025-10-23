@@ -954,7 +954,7 @@ function displayResult(result) {
             console.log(`  ${index + 1}. ${yaku}`);
             const yakuItem = document.createElement('div');
             yakuItem.className = 'yaku-item';
-            yakuItem.textContent = yaku;
+            yakuItem.textContent = yaku; // 既に翻数情報が含まれている
             yakuList.appendChild(yakuItem);
         });
     } else {

@@ -7,9 +7,14 @@ import os
 import subprocess
 import tempfile
 from PIL import Image
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
+
+# デバッグ用画像保存フォルダ
+DEBUG_IMAGES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'debug_images')
+os.makedirs(DEBUG_IMAGES_DIR, exist_ok=True)
 
 def save_base64_image(image_data, filename):
     """Base64画像データをファイルに保存"""
@@ -27,6 +32,29 @@ def save_base64_image(image_data, filename):
         return temp_path
     except Exception as e:
         print(f"画像保存エラー: {e}")
+        return None
+
+def save_debug_image(image_data, image_type):
+    """デバッグ用に画像を保存"""
+    try:
+        # base64デコード
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+        
+        image_bytes = base64.b64decode(image_data)
+        image = Image.open(io.BytesIO(image_bytes))
+        
+        # タイムスタンプ付きファイル名を生成
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]  # ミリ秒まで
+        filename = f"{timestamp}_{image_type}.jpg"
+        debug_path = os.path.join(DEBUG_IMAGES_DIR, filename)
+        
+        # デバッグフォルダに保存
+        image.save(debug_path, 'JPEG', quality=95)
+        print(f"🖼️ デバッグ画像保存: {filename}")
+        return debug_path
+    except Exception as e:
+        print(f"🚨 デバッグ画像保存エラー: {e}")
         return None
 
 def run_process_script(image_path, output_dir):
@@ -118,10 +146,14 @@ def run_calculate_script(hand_json_path, dora_json_path, options):
         
         # ドラ表示牌の設定
         if dora_json_path:
+            print(f'🀅 ドラ表示牌処理開始: {len(dora_json_path)}枚の認識結果')
             dora_codes = []
-            for detection in dora_json_path:
-                if detection.get('confidence', 0) > 0.5:
-                    class_id = detection.get('class_id', 0)
+            for i, detection in enumerate(dora_json_path):
+                confidence = detection.get('confidence', 0)
+                class_id = detection.get('class_id', 0)
+                print(f'  ドラ{i+1}: class_id={class_id}, confidence={confidence:.3f}')
+                
+                if confidence > 0.5:
                     if 0 <= class_id < 40:  # 有効な牌の範囲
                         tile_codes = [
                             "1m","2m","3m","4m","5m","6m","7m","8m","9m",
@@ -131,10 +163,31 @@ def run_calculate_script(hand_json_path, dora_json_path, options):
                             "0m","0p","0s"
                         ]
                         if class_id < len(tile_codes):
-                            dora_codes.append(tile_codes[class_id])
+                            tile_code = tile_codes[class_id]
+                            dora_codes.append(tile_code)
+                            print(f'    → 採用: {tile_code}')
+                        else:
+                            print(f'    → 無効なclass_id: {class_id}')
+                    else:
+                        print(f'    → class_id範囲外: {class_id}')
+                else:
+                    print(f'    → 信頼度不足: {confidence:.3f} < 0.5')
             
             if dora_codes:
-                cmd.extend(['--dora', ''.join(dora_codes)])
+                print(f'📝 ドラコード配列: {dora_codes}')
+                dora_string = ''.join(dora_codes)
+                print(f'📝 結合結果: "{dora_string}"')
+                print(f'📝 結合後の長さ: {len(dora_string)}文字')
+                
+                cmd.extend(['--dora', dora_string])
+                print(f'✅ ドラ表示牌設定: {dora_string} ({len(dora_codes)}枚)')
+                
+                # コマンドライン引数を確認
+                print(f'📋 最終コマンド引数に含まれるドラ: --dora {dora_string}')
+            else:
+                print('⚠️ 有効なドラ表示牌なし')
+        else:
+            print('ℹ️ ドラ表示牌データなし')
         
         result = subprocess.run(cmd, capture_output=True, text=True, cwd=os.path.dirname(os.path.abspath(__file__)))
         
@@ -242,6 +295,9 @@ def calculate_score():
             if not hand_image_path:
                 return jsonify({'error': '手牌画像の保存に失敗しました'}), 400
             
+            # デバッグ用画像保存
+            save_debug_image(hand_tiles_data[0], 'hand_tiles')
+            
             # 手牌認識を実行
             print('🀄 手牌認識開始...')
             hand_detections = run_process_script(hand_image_path, temp_dir)
@@ -256,6 +312,8 @@ def calculate_score():
                 print('🀅 ドラ表示牌認識開始...')
                 dora_image_path = save_base64_image(dora_tiles_data[0], 'dora_tiles.jpg')
                 if dora_image_path:
+                    # デバッグ用画像保存
+                    save_debug_image(dora_tiles_data[0], 'dora_tiles')
                     dora_detections = run_dora_script(dora_image_path, temp_dir)
                     if dora_detections:
                         print(f'✅ ドラ表示牌認識完了: {len(dora_detections)}枚検出')
