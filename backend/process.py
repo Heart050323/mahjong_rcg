@@ -5,7 +5,7 @@ import os
 import argparse
 import tempfile
 
-def recognize_hand_tiles(image_path, model_path="./models/best.pt", output_dir=None):
+def recognize_hand_tiles(image_path, model_path="./models/best_v2.pt", output_dir=None):
     """
     手牌を認識する関数
     
@@ -81,8 +81,8 @@ def main():
     parser = argparse.ArgumentParser(description='手牌認識スクリプト')
     parser.add_argument('--input', type=str, required=True, help='入力画像のパス')
     parser.add_argument('--output', type=str, help='出力ディレクトリ（省略時は一時ディレクトリ）')
-    parser.add_argument('--model', type=str, default='./models/best.pt', help='モデルファイルのパス')
-    
+    parser.add_argument('--model', type=str, default='./models/best_v2.pt', help='モデルファイルのパス')
+
     args = parser.parse_args()
     
     # 手牌認識を実行
