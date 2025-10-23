@@ -93,17 +93,17 @@ def main():
     )
     
     if detections:
-        print(f"\n=== 手牌認識完了 ===")
-        print(f"検出された牌数: {len(detections)}")
+        print(f"\n🀄 ===== 手牌認識完了 =====")
+        print(f"🔍 検出された牌数: {len(detections)}")
         
         # 信頼度の高い順にソート
         sorted_detections = sorted(detections, key=lambda x: x['confidence'], reverse=True)
         
-        print("\n検出結果（信頼度順）:")
+        print("\n📋 検出結果（信頼度順）:")
         for i, detection in enumerate(sorted_detections, 1):
-            print(f"{i}. {detection['name']} (信頼度: {detection['confidence']*100:.1f}%)")
+            print(f"  {i}. {detection['name']} (信頼度: {detection['confidence']*100:.1f}%)")
     else:
-        print("手牌が検出されませんでした。")
+        print("❌ 手牌が検出されませんでした。")
 
 if __name__ == "__main__":
     main()

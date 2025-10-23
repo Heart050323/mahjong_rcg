@@ -847,7 +847,8 @@ async function handleFormSubmit(event) {
         };
         
         // API呼び出し
-        const response = await fetch('https://mahjong-rcg-client.onrender.com/api/calculate', {
+        // const response = await fetch('https://mahjong-rcg-client.onrender.com/api/calculate', {
+        const response = await fetch('http://localhost:5001/api/calculate', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -858,20 +859,29 @@ async function handleFormSubmit(event) {
         const result = await response.json();
         
         if (response.ok) {
-            console.log('API応答を受信:', result);
-            console.log('result.cost:', result.cost);
-            console.log('result.cost type:', typeof result.cost);
-            if (result.cost) {
-                console.log('result.cost.main:', result.cost.main);
-                console.log('result.cost.additional:', result.cost.additional);
-            }
+            console.log('🎯 ===== API応答受信成功 =====');
+            console.log('📊 受信データ:', {
+                han: result.han,
+                fu: result.fu,
+                cost: result.cost,
+                yaku: result.yaku,
+                recognized_hand_tiles: result.recognized_hand_tiles,
+                recognized_dora_tiles: result.recognized_dora_tiles
+            });
+            console.log('💰 点数詳細:', {
+                cost: result.cost,
+                type: typeof result.cost,
+                main: result.cost?.main,
+                additional: result.cost?.additional
+            });
             displayResult(result);
         } else {
+            console.error('❌ API応答エラー:', result.error);
             showError(result.error || '計算中にエラーが発生しました');
         }
         
     } catch (error) {
-        console.error('Error:', error);
+        console.error('🚨 通信エラー:', error.message);
         showError('サーバーとの通信中にエラーが発生しました');
     } finally {
         showLoading(false);
@@ -884,14 +894,15 @@ function displayResult(result) {
     document.getElementById('hanValue').textContent = result.han;
     document.getElementById('fuValue').textContent = result.fu;
     
-    // デバッグ用: 受け取った結果を表示
-    console.log('displayResult - 受け取った結果:', result);
-    console.log('displayResult - cost:', result.cost);
-    console.log('displayResult - main:', result.cost?.main);
-    console.log('displayResult - additional:', result.cost?.additional);
-    console.log('displayResult - cost type:', typeof result.cost);
-    console.log('displayResult - main type:', typeof result.cost?.main);
-    console.log('displayResult - additional type:', typeof result.cost?.additional);
+    console.log('🖥️ ===== 結果表示処理開始 =====');
+    console.log('📋 表示データ解析:', {
+        han: result.han,
+        fu: result.fu,
+        cost: result.cost,
+        costType: typeof result.cost,
+        yaku: result.yaku,
+        yakuCount: result.yaku?.length || 0
+    });
     
     // 点数の表示
     let costText = '';
@@ -899,58 +910,62 @@ function displayResult(result) {
         const main = parseInt(result.cost.main);
         const additional = parseInt(result.cost.additional);
         
-        // フロントエンドのフォームからwinTypeを取得
         const winType = document.getElementById('winType').value;
-        console.log('displayResult - winType:', winType);
-        console.log('displayResult - main (parsed):', main);
-        console.log('displayResult - additional (parsed):', additional);
+        console.log('💰 点数計算処理:', {
+            winType: winType,
+            mainRaw: result.cost.main,
+            additionalRaw: result.cost.additional,
+            mainParsed: main,
+            additionalParsed: additional
+        });
         
         if (winType === 'tsumo') {
-            // ツモの場合
-            console.log('ツモ判定 - main:', main, 'additional:', additional);
+            console.log('🀄 ツモ和了の点数計算');
             if (additional === 0) {
-                // additionalが0の場合は親のみ（ロンと同じ）
                 costText = `${main}点`;
-                console.log('ツモ（親のみ）:', costText);
+                console.log('  → 親のみ支払い:', costText);
             } else if (main === additional) {
-                // 親子同じ点数（オール）の場合
                 costText = `${main}点オール`;
-                console.log('ツモ（オール）:', costText);
+                console.log('  → オール:', costText);
             } else {
-                // 親子異なる点数の場合
                 costText = `親: ${main}点, 子: ${additional}点`;
-                console.log('ツモ（親子異なる）:', costText);
+                console.log('  → 親子異なる:', costText);
             }
         } else {
-            // ロンの場合
+            console.log('🎯 ロン和了の点数計算');
             costText = `${main}点`;
-            console.log('ロン:', costText);
+            console.log('  → ロン:', costText);
         }
     } else {
-        console.log('displayResult - costが無効:', result.cost);
+        console.log('⚠️ 点数データ無効:', result.cost);
         costText = '点数計算エラー';
     }
-    console.log('displayResult - 最終的なcostText:', costText);
+    console.log('✅ 最終点数表示:', costText);
     document.getElementById('costValue').textContent = costText;
     
     // 役の表示
+    console.log('🎌 役表示処理開始');
     const yakuList = document.getElementById('yakuList');
     yakuList.innerHTML = '';
     
     if (result.yaku && result.yaku.length > 0) {
-        result.yaku.forEach(yaku => {
+        console.log(`📜 ${result.yaku.length}個の役を表示:`);
+        result.yaku.forEach((yaku, index) => {
+            console.log(`  ${index + 1}. ${yaku}`);
             const yakuItem = document.createElement('div');
             yakuItem.className = 'yaku-item';
             yakuItem.textContent = yaku;
             yakuList.appendChild(yakuItem);
         });
     } else {
+        console.log('❌ 役なし');
         const noYakuItem = document.createElement('div');
         noYakuItem.className = 'yaku-item';
         noYakuItem.textContent = '役なし';
         yakuList.appendChild(noYakuItem);
     }
     
+    console.log('🖥️ ===== 結果表示処理完了 =====');
     // 結果セクションを表示
     resultSection.classList.add('show');
     resultSection.scrollIntoView({ behavior: 'smooth' });

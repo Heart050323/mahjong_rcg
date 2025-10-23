@@ -211,6 +211,7 @@ def run_calculate_script(hand_json_path, dora_json_path, options):
 def calculate_score():
     try:
         data = request.json
+        print('📥 ===== API計算リクエスト受信 =====')
         
         # フロントエンドからのデータ取得
         hand_tiles_data = data.get('handTiles', [])
@@ -220,7 +221,16 @@ def calculate_score():
         round_wind = data.get('roundWind', '東')
         player_wind = data.get('playerWind', '東')
         
+        print(f'📋 受信パラメータ:')
+        print(f'  手牌画像: {len(hand_tiles_data)}枚')
+        print(f'  ドラ画像: {len(dora_tiles_data)}枚')
+        print(f'  リーチ: {riichi}')
+        print(f'  和了方法: {win_type}')
+        print(f'  場風: {round_wind}')
+        print(f'  自風: {player_wind}')
+        
         if not hand_tiles_data:
+            print('❌ 手牌画像なし')
             return jsonify({'error': '手牌の画像がありません'}), 400
         
         # 一時ディレクトリを作成
@@ -233,16 +243,26 @@ def calculate_score():
                 return jsonify({'error': '手牌画像の保存に失敗しました'}), 400
             
             # 手牌認識を実行
+            print('🀄 手牌認識開始...')
             hand_detections = run_process_script(hand_image_path, temp_dir)
             if not hand_detections:
+                print('❌ 手牌認識失敗')
                 return jsonify({'error': '手牌の認識に失敗しました'}), 400
+            print(f'✅ 手牌認識完了: {len(hand_detections)}枚検出')
             
             # ドラ表示牌認識
             dora_detections = None
             if dora_tiles_data:
+                print('🀅 ドラ表示牌認識開始...')
                 dora_image_path = save_base64_image(dora_tiles_data[0], 'dora_tiles.jpg')
                 if dora_image_path:
                     dora_detections = run_dora_script(dora_image_path, temp_dir)
+                    if dora_detections:
+                        print(f'✅ ドラ表示牌認識完了: {len(dora_detections)}枚検出')
+                    else:
+                        print('⚠️ ドラ表示牌認識失敗')
+            else:
+                print('ℹ️ ドラ表示牌なし')
             
             # 風の文字列を英語に変換
             def convert_wind_to_english(wind_str):
@@ -264,12 +284,18 @@ def calculate_score():
             }
             
             # 点数計算を実行
+            print('🧮 点数計算開始...')
             result = run_calculate_script(hand_detections, dora_detections, options)
             if not result:
+                print('❌ 点数計算失敗')
                 return jsonify({'error': '点数計算に失敗しました'}), 400
             
-            # デバッグ用: 結果の内容を表示
-            print(f"計算結果: {result}")
+            print(f'✅ 点数計算完了: {result["han"]}翻 {result["fu"]}符')
+            print(f'🔍 計算結果詳細:')
+            print(f'  翻数: {result["han"]}')
+            print(f'  符数: {result["fu"]}')
+            print(f'  点数: {result["cost"]}')
+            print(f'  役: {result["yaku"]} ({len(result.get("yaku", []))}個)')
             
             # 結果の整形
             response = {
@@ -282,7 +308,12 @@ def calculate_score():
                 'raw_output': result['raw_output']
             }
             
-            print(f"API応答: {response}")  # デバッグ用
+            print('📤 API応答データ:')
+            print(f'  翻数: {response["han"]}')
+            print(f'  符数: {response["fu"]}')
+            print(f'  点数: {response["cost"]}')
+            print(f'  役: {response["yaku"]}')
+            print(f'  認識枚数: 手牌{response["recognized_hand_tiles"]}枚, ドラ{response["recognized_dora_tiles"]}枚')
             return jsonify(response)
             
         finally:
@@ -291,7 +322,7 @@ def calculate_score():
             shutil.rmtree(temp_dir, ignore_errors=True)
             
     except Exception as e:
-        print(f"計算エラー: {e}")
+        print(f'🚨 API計算エラー: {e}')
         return jsonify({'error': f'計算エラー: {str(e)}'}), 500
 
 @app.route('/api/recognize', methods=['POST'])

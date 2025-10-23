@@ -65,8 +65,8 @@ def recognize_dora_tiles(image_path, model_path="./models/best.pt", output_dir=N
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(detections, f, ensure_ascii=False, indent=2)
         
-        print(f"ドラ表示牌認識結果を '{json_path}' に保存しました。")
-        print(f"検出された牌: {len(detections)}枚")
+        print(f"💾 ドラ表示牌認識結果を '{json_path}' に保存")
+        print(f"🔍 検出された牌: {len(detections)}枚")
         
         for detection in detections:
             print(f"  - {detection['name']} (信頼度: {detection['confidence']*100:.1f}%)")
@@ -74,7 +74,7 @@ def recognize_dora_tiles(image_path, model_path="./models/best.pt", output_dir=N
         return detections
         
     except Exception as e:
-        print(f"ドラ表示牌認識中にエラーが発生しました: {e}")
+        print(f"🚨 ドラ表示牌認識エラー: {e}")
         return []
 
 def main():
@@ -93,17 +93,17 @@ def main():
     )
     
     if detections:
-        print(f"\n=== ドラ表示牌認識完了 ===")
-        print(f"検出された牌数: {len(detections)}")
+        print(f"\n🀅 ===== ドラ表示牌認識完了 =====")
+        print(f"🔍 検出された牌数: {len(detections)}")
         
         # 信頼度の高い順にソート
         sorted_detections = sorted(detections, key=lambda x: x['confidence'], reverse=True)
         
-        print("\n検出結果（信頼度順）:")
+        print("\n📋 検出結果（信頼度順）:")
         for i, detection in enumerate(sorted_detections, 1):
-            print(f"{i}. {detection['name']} (信頼度: {detection['confidence']*100:.1f}%)")
+            print(f"  {i}. {detection['name']} (信頼度: {detection['confidence']*100:.1f}%)")
     else:
-        print("ドラ表示牌が検出されませんでした。")
+        print("❌ ドラ表示牌が検出されませんでした。")
 
 if __name__ == "__main__":
     main()

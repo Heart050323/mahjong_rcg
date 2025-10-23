@@ -177,33 +177,34 @@ def main():
         detections = json.load(f)
     counts, kept = counts_from_detections(detections, threshold=args.threshold)
 
-    print("=== 存在する牌とその枚数 ===")
+    print("🀄 ===== 存在する牌とその枚数 =====")
     print(to_pretty_counts(counts))
-    print()
     
     # ドラ表示牌の情報を表示
     if args.dora:
-        print(f"=== ドラ表示牌 ===")
-        print(f"ドラ表示牌: {args.dora}")
-        print()
+        print(f"🀅 ===== ドラ表示牌 =====")
+        print(f"  ドラ表示牌: {args.dora}")
+        print(f"  ドラ枚数: {len(args.dora.replace('m', '').replace('p', '').replace('s', '').replace('z', ''))}枚")
 
     if not kept:
-        print("有効な検出がありません。")
+        print("❌ 有効な検出がありません。")
         return
 
     winning_tile_info = max(kept, key=lambda x: x[2][2])  # xmax
     winning_tile = winning_tile_info[0]
-    print(f"自動判定されたあがり牌: {winning_tile}\n")
+    print(f"🎯 自動判定されたあがり牌: {winning_tile}")
 
     tiles14 = select_14_tiles(kept)
     if len(tiles14) < 14:
-        print(f"[警告] 14枚未満 ({len(tiles14)}枚)。枚数が足りません。")
+        print(f"⚠️ 枚数不足: {len(tiles14)}枚 (14枚未満)")
         return
     if winning_tile not in tiles14:
         tiles14[-1] = winning_tile
 
     tiles_str = tiles_list_to_string(tiles14)
-    print(f"=== 点数計算入力 ===\n手牌(14枚): {tiles_str}\n和了牌: {winning_tile}\n")
+    print(f"🧮 ===== 点数計算入力 =====")
+    print(f"🀄 手牌(14枚): {tiles_str}")
+    print(f"🎯 和了牌: {winning_tile}")
 
     tiles_136 = safe_string_to_136_array(TilesConverter, tiles_str)
     win_tile_136 = safe_string_to_136_array(TilesConverter, winning_tile)[0]
@@ -257,22 +258,19 @@ def main():
             config=config
         )
     except Exception as e:
-        print(f"点数計算エラー: {e}")
-        print(f"手牌: {tiles_str}")
-        print(f"和了牌: {winning_tile}")
-        print(f"tiles_136: {tiles_136}")
-        print(f"win_tile_136: {win_tile_136}")
+        print(f"🚨 点数計算エラー: {e}")
+        print(f"  手牌: {tiles_str}")
+        print(f"  和了牌: {winning_tile}")
+        print(f"  tiles_136: {tiles_136}")
+        print(f"  win_tile_136: {win_tile_136}")
         return
 
-    print("=== 点数計算結果 ===")
+    print("✅ ===== 点数計算結果 =====")
     
     # 結果の検証
     if not result:
-        print("結果がNoneです")
+        print("❌ 結果がNoneです")
         return
-    
-    print(f"結果の型: {type(result)}")
-    print(f"結果の属性: {dir(result)}")
     
     def _yaku_name(y):
         return getattr(y, "name", y.__class__.__name__)
@@ -288,23 +286,23 @@ def main():
         return None
 
     if result.yaku:
-        print("役:")
+        print("🎌 役:")
         for y in result.yaku:
             name = _yaku_name(y)
             hv = _yaku_han(y, is_closed=args.closed)
             if hv is not None:
-                print(f"- {name} ({hv}翻)")
+                print(f"  - {name} ({hv}翻)")
             else:
-                print(f"- {name}")
+                print(f"  - {name}")
     else:
-        print("役: なし（0翻）")
+        print("❌ 役: なし（0翻）")
 
-    print(f"翻数: {result.han}翻")
-    print(f"符数: {result.fu}符")
+    print(f"🔢 翻数: {result.han}翻")
+    print(f"🎯 符数: {result.fu}符")
     if result.cost:
-        print(f"支払い/合計点: {result.cost}")
+        print(f"💰 支払い/合計点: {result.cost}")
     if hasattr(result, 'limit') and result.limit:
-        print(f"役満区分: {result.limit}")
+        print(f"🏆 役満区分: {result.limit}")
     elif hasattr(result, 'yaku') and result.yaku:
         print(f"役: {result.yaku}")
 
