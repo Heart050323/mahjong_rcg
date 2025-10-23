@@ -847,8 +847,8 @@ async function handleFormSubmit(event) {
         };
         
         // API呼び出し
-        // const response = await fetch('https://mahjong-rcg-client.onrender.com/api/calculate', {
-        const response = await fetch('http://localhost:5001/api/calculate', {
+        const response = await fetch('https://mahjong-rcg-client.onrender.com/api/calculate', {
+        // const response = await fetch('http://localhost:5001/api/calculate', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
